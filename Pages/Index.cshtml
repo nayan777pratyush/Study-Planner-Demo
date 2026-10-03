@@ -1,0 +1,367 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Study dashboard";
+}
+
+<main class="app-shell">
+    <aside class="sidebar">
+        <a class="brand" asp-page="/Index">
+            <span class="brand-mark" aria-hidden="true">S</span>
+            <span>
+                study
+                <span class="brand-light">room</span>
+            </span>
+        </a>
+        <p class="nav-caption">WORKSPACE</p>
+        <nav class="main-nav" aria-label="Main navigation">
+            <a class="nav-item active" href="#overview">
+                <span class="nav-icon">◫</span>
+                Overview
+            </a>
+            <a class="nav-item" href="#planner">
+                <span class="nav-icon">☷</span>
+                Study planner
+            </a>
+            <a class="nav-item" href="#subjects">
+                <span class="nav-icon">▦</span>
+                Subjects 
+                <span class="nav-count">@Model.Subjects.Count</span>
+            </a>
+        </nav>
+        <div class="sidebar-bottom">
+            <div class="week-card">
+                <span class="week-icon">✳</span>
+                <strong>Steady progress</strong>
+                <p>Small sessions add up. Keep your next step clear.</p>
+            </div>
+            <div class="profile-row">
+                <span class="avatar">ST</span>
+                <span>
+                    <strong>My workspace</strong>
+                    <small>Study planner</small>
+                </span>
+                <span class="profile-more">···</span>
+            </div>
+        </div>
+    </aside>
+
+    <section class="main-content" id="overview">
+        <header class="page-header">
+            <div>
+                <span class="breadcrumb">
+                    WORKSPACE 
+                    <span>/</span> 
+                    OVERVIEW
+                </span>
+                <h1>Good to see you.</h1>
+                <p>Your C# study plan at a glance.</p>
+            </div>
+            <time 
+                class="today-chip" 
+                datetime="@DateTime.Today.ToString("yyyy-MM-dd")"
+            >
+                <span aria-hidden="true">◷</span> 
+                @DateTime.Today.ToString("dddd, MMMM d")
+            </time>
+        </header>
+
+        @if (!Model.IsDatabaseConfigured) {
+            <section class="notice setup-notice" aria-labelledby="setup-title">
+                <span class="notice-icon">!</span>
+                <div>
+                    <strong id="setup-title">Connect your Neon database</strong>
+                    <p>
+                        Set 
+                        <code>ConnectionStrings__Neon</code> 
+                        to your Neon PostgreSQL connection string, 
+                        then restart the site. 
+                        Your tables and starter study plan will be created automatically.
+                    </p>
+                </div>
+            </section>
+        }
+        else if (Model.DatabaseError is not null) {
+            <section class="notice error-notice" role="alert">
+                <span class="notice-icon">!</span>
+                <div>
+                    <strong>Database connection issue</strong>
+                    <p>
+                        @Model.DatabaseError Make sure the database is reachable and its connection string includes SSL.
+                    </p>
+                </div>
+            </section>
+        }
+        @if (Model.StatusMessage is not null) {
+            <p class="status-message" role="status">@Model.StatusMessage</p>
+        }
+
+        <section class="metrics-grid" aria-label="Study summary">
+            <article class="metric-card">
+                <span class="metric-icon green-icon">✓</span>
+                <span class="metric-label">COMPLETED</span>
+                <strong>@Model.CompletedCount</strong>
+                <small>tasks finished</small>
+            </article>
+            <article class="metric-card">
+                <span class="metric-icon blue-icon">◷</span>
+                <span class="metric-label">UP NEXT</span>
+                <strong>@Model.PendingCount</strong>
+                <small>tasks to work through</small>
+            </article>
+            <article class="metric-card">
+                <span class="metric-icon amber-icon">⌁</span>
+                <span class="metric-label">STUDY TIME</span>
+                <strong>
+                    @(Model.PlannedMinutes / 60)
+                    <span class="metric-unit">h</span> 
+                    @(Model.PlannedMinutes % 60)
+                    <span class="metric-unit">m</span>
+                </strong>
+                <small>estimated remaining</small>
+            </article>
+            <article class="metric-card">
+                <span class="metric-icon coral-icon">!</span>
+                <span class="metric-label">PAST DUE</span>
+                <strong>@Model.OverdueCount</strong>
+                <small>tasks need attention</small>
+            </article>
+        </section>
+
+        <section class="content-grid">
+            <div class="work-panel" id="planner">
+                <div class="section-heading">
+                    <div>
+                        <span class="eyebrow">YOUR WORKLOAD</span>
+                        <h2>Study planner</h2>
+                    </div>
+                    <span class="task-total">@Model.Tasks.Count TASKS</span>
+                </div>
+                <div class="planner-progress">
+                    <div>
+                        <span>Overall progress</span>
+                        <strong>@Model.ProgressPercentage%</strong>
+                    </div>
+                    <div class="progress-track">
+                        <span style="width: @Model.ProgressPercentage%"></span>
+                    </div>
+                </div>
+                <div class="task-table-wrap">
+                    <table class="task-table">
+                        <thead>
+                            <tr>
+                                <th>Task</th>
+                                <th>Due date</th>
+                                <th>Priority</th>
+                                <th>Time</th>
+                                <th>
+                                    <span class="sr-only">Actions</span>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @if (Model.Tasks.Count == 0) {
+                            <tr>
+                                <td class="empty-state" colspan="5">
+                                    Your planner is clear. Add a task to get started.
+                                </td>
+                            </tr>
+                        }
+                        @foreach (var task in Model.Tasks) {
+                            <tr class="@(task.IsComplete ? "task-complete" : "")">
+                                <td>
+                                    <div class="task-name-cell">
+                                        <form method="post" asp-page-handler="Toggle">
+                                            <input 
+                                                type="hidden" 
+                                                name="id" 
+                                                value="@task.Id" 
+                                            />
+                                            <button 
+                                                class="check-button @(task.IsComplete 
+                                                ? "checked" 
+                                                : "")" 
+                                                type="submit" 
+                                                aria-label="Mark @task.Title as @(task.IsComplete 
+                                                ? "incomplete" 
+                                                : "complete")"
+                                            >
+                                                @(task.IsComplete ? "✓" : "")
+                                            </button>
+                                        </form>
+                                        <span 
+                                            class="subject-dot" 
+                                            style="--subject-color: @task.Subject.Color"
+                                        >
+                                        </span>
+                                        <span class="task-title">
+                                            @task.Title
+                                            <small>@task.Subject.Name</small>
+                                        </span>
+                                    </div>
+                                </td>
+                                <td class="due-date @(task.DueDate < DateOnly.FromDateTime(DateTime.Today) 
+                                    && 
+                                    !task.IsComplete 
+                                    ? "is-overdue" 
+                                    : "")"
+                                >
+                                    @(task.DueDate?.ToString("MMM d") ?? "No date")
+                                </td>
+                                <td>
+                                    <span class="priority priority-@task.Priority.ToLowerInvariant()">
+                                        @task.Priority
+                                    </span>
+                                </td>
+                                <td class="time-cell">
+                                    @task.EstimatedMinutes min
+                                </td>
+                                <td>
+                                    <form method="post" asp-page-handler="Delete">
+                                        <input type="hidden" name="id" value="@task.Id" />
+                                        <button 
+                                            class="icon-button delete-button" 
+                                            type="submit" 
+                                            aria-label="Delete @task.Title" 
+                                            title="Delete task"
+                                        >
+                                            ×
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+                <form method="post" asp-page-handler="AddTask" class="add-task-form">
+                    <h3>Add a study task</h3>
+                    <div class="form-row task-entry-row">
+                        <label class="sr-only" for="task-title">Task name</label>
+                        <input 
+                            id="task-title" 
+                            name="title" 
+                            type="text" 
+                            maxlength="120" 
+                            placeholder="What needs to get done?" 
+                            required 
+                        />
+                        <label class="sr-only" for="task-subject">Subject</label>
+                        <select id="task-subject" name="subjectId" required>
+                            <option value="">Subject</option>
+                            @foreach (var subject in Model.Subjects) {
+                                <option value="@subject.Id">@subject.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="form-row task-options-row">
+                        <label class="field-label">
+                            Due 
+                            <input type="date" name="dueDate" />
+                        </label>
+                        <label class="field-label">
+                            Priority 
+                            <select name="priority">
+                                <option>Medium</option>
+                                <option>High</option>
+                                <option>Low</option>
+                            </select>
+                        </label>
+                        <label class="field-label">
+                            Minutes 
+                            <input 
+                                type="number" 
+                                name="estimatedMinutes" 
+                                value="30" 
+                                min="5" 
+                                max="600" 
+                                required 
+                            />
+                        </label>
+                        <button class="primary-button" type="submit">
+                            Add task 
+                            <span aria-hidden="true">+</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <aside class="side-column" id="subjects">
+                <section class="side-panel progress-panel">
+                    <div class="side-heading">
+                        <div>
+                            <span class="eyebrow">THIS WEEK</span>
+                            <h2>Planned study time</h2>
+                        </div>
+                        <span class="sparkle">✳</span>
+                    </div>
+                    <div class="weekly-chart" aria-label="Planned study minutes for this week">
+                        @foreach (var day in Model.WeeklyPlan) {
+                            var maxMinutes = Model.WeeklyPlan.Max(item => item.Minutes);
+                            var barHeight = maxMinutes == 0 
+                                ? 0 
+                                : Math.Max(8, day.Minutes * 100 / maxMinutes);
+                            <div class="chart-column @(day.Date.Date == DateTime.Today ? "today-column" : "")">
+                                <span style="height: @barHeight%" title="@day.Minutes minutes"></span>
+                                <small>@day.Date.ToString("ddd")</small>
+                            </div>
+                        }
+                    </div>
+                    <p class="chart-caption">
+                        <span class="chart-key"></span> 
+                        Estimated minutes by due date
+                    </p>
+                </section>
+                <section class="side-panel subjects-panel">
+                    <div class="side-heading">
+                        <div>
+                            <span class="eyebrow">ORGANIZE</span>
+                            <h2>Your subjects</h2>
+                        </div>
+                        <span class="subject-count">@Model.Subjects.Count</span>
+                    </div>
+                    @if (Model.Subjects.Count == 0) {
+                        <p class="empty-subjects">Connect your database to see subjects.</p>
+                    }
+                    <ul class="subject-list">
+                        @foreach (var subject in Model.Subjects) {
+                            <li>
+                                <span class="subject-swatch" style="--subject-color: @subject.Color"></span>
+                                <span>@subject.Name</span>
+                                <small>@subject.Tasks.Count</small>
+                            </li>
+                        }
+                    </ul>
+                    <form method="post" asp-page-handler="AddSubject" class="subject-form">
+                        <label class="sr-only" for="subject-name">New subject name</label>
+                        <input 
+                            id="subject-name" 
+                            type="text" 
+                            name="subjectName" 
+                            maxlength="40" 
+                            minlength="2" 
+                            placeholder="New subject name" 
+                            required 
+                        />
+                        <label class="sr-only" for="subject-color">Subject color</label>
+                        <select id="subject-color" name="color" aria-label="Subject color">
+                            <option value="#237a57">Green</option>
+                            <option value="#d66c4f">Coral</option>
+                            <option value="#4e73a1">Blue</option>
+                            <option value="#b7862b">Gold</option>
+                        </select>
+                        <button type="submit" aria-label="Add subject" title="Add subject">+</button>
+                    </form>
+                </section>
+            </aside>
+        </section>
+        <footer class="page-footer">
+            <span>
+                Studyroom 
+                <span class="footer-dot">·</span> 
+                Make room for progress
+            </span>
+            <span>NEON POSTGRESQL</span>
+        </footer>
+    </section>
+</main>
