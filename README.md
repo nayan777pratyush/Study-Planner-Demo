@@ -2,26 +2,29 @@
 
 Studyroom is an ASP.NET Core Razor Pages study planner backed by Neon PostgreSQL. EF Core creates the `subjects` and `study_tasks` tables; the planner ensures a C# Programming course and a practical starter plan exist without replacing existing subjects or tasks.
 
-Neon project configuration is in [neon.ts](neon.ts), with Neon Auth enabled. The Neon CLI project link is kept in `.neon`, and generated credentials are kept in `.env.local`; both are ignored by Git.
+Neon project configuration is in [neon.ts](neon.ts), with Neon Auth enabled. The Neon CLI project link is kept in `.neon`, and generated credentials are kept in `.env.local`; both are ignored by Git. The ASP.NET app reads its database connection from `ConnectionStrings:Neon` configuration.
+The ASP.NET app reads its database connection from `ConnectionStrings:Neon` configuration.
+
+If a connection string was committed or exposed, rotate it in Neon before continuing.
 
 ## Connect Neon
 
-1. Create a PostgreSQL project in Neon and copy its pooled or direct connection string from **Connect**.
-2. Put the connection string in `appsettings.Development.json` under `ConnectionStrings:Neon`, or set it for the current PowerShell session:
+1. Create a PostgreSQL project in Neon and copy its pooled or direct connection string from **Connect**. If a connection string was committed or exposed, rotate it in Neon before continuing.
+2. For local development, store it with .NET user-secrets, not in `appsettings.Development.json`:
 
-   ```powershell
-   $env:ConnectionStrings__Neon = "Host=YOUR_NEON_HOST;Port=5432;Database=YOUR_DATABASE;Username=YOUR_USERNAME;Password=YOUR_PASSWORD;SSL Mode=Require;Trust Server Certificate=true"
-   dotnet run
-   ```
+```powershell
+dotnet user-secrets init
+dotnet user-secrets set "ConnectionStrings:Neon" "<rotated-Neon-connection-string>"
+dotnet run
+```
 
-3. Open the local URL printed by `dotnet run`. Keep the connection string out of source control; use an environment variable or a secret store.
+1. For deployment, set `ConnectionStrings__Neon` through the hosting platform's secret configuration. Never put a real connection string in tracked files.
 
 ## Neon CLI setup already completed
 
 From this directory, the project was linked and deployed with:
 
 ```powershell
-neon link --project-id orange-bird-14883508 --branch production -y
 neon config init
 neon deploy
 ```
