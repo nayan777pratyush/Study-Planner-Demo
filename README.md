@@ -2,23 +2,18 @@
 
 Studyroom is an ASP.NET Core Razor Pages study planner backed by Neon PostgreSQL. EF Core creates the `subjects` and `study_tasks` tables; the planner ensures a C# Programming course and a practical starter plan exist without replacing existing subjects or tasks.
 
-Neon project configuration is in [neon.ts](neon.ts), with Neon Auth enabled. The Neon CLI project link is kept in `.neon`, and generated credentials are kept in `.env.local`; both are ignored by Git. The ASP.NET app reads its database connection from `ConnectionStrings:Neon` configuration.
-The ASP.NET app reads its database connection from `ConnectionStrings:Neon` configuration.
-
-If a connection string was committed or exposed, rotate it in Neon before continuing.
+Neon project configuration is in [neon.ts](neon.ts), with Neon Auth enabled. The Neon CLI project link is kept in `.neon`, and generated credentials are kept in `.env.local`; both are ignored by Git. During development, the ASP.NET app reads `DATABASE_URL` from `.env.local`. In deployment, it reads `ConnectionStrings__Neon` from the hosting platform's secret configuration.
 
 ## Connect Neon
 
-1. Create a PostgreSQL project in Neon and copy its pooled or direct connection string from **Connect**. If a connection string was committed or exposed, rotate it in Neon before continuing.
-2. For local development, store it with .NET user-secrets, not in `appsettings.Development.json`:
+1. If a connection string was exposed, reset the role password in the Neon Console under **Postgres database → Roles → Reset password**. Repeat on each branch that uses the role; the old password stops working on new connections.
+2. From this project directory, refresh the ignored local environment file:
 
 ```powershell
-dotnet user-secrets init
-dotnet user-secrets set "ConnectionStrings:Neon" "<rotated-Neon-connection-string>"
-dotnet run
+neon env pull --file .env.local
 ```
 
-1. For deployment, set `ConnectionStrings__Neon` through the hosting platform's secret configuration. Never put a real connection string in tracked files.
+1. Run `dotnet run`. The app loads `.env.local` in Development. For deployment, set `ConnectionStrings__Neon` through the hosting platform's secret configuration. Never commit `.env.local` or a real connection string.
 
 ## Neon CLI setup already completed
 

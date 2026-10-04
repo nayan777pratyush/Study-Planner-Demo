@@ -4,9 +4,19 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+if (builder.Environment.IsDevelopment())
+{
+    var envFilePath = Path.Combine(builder.Environment.ContentRootPath, ".env.local");
+    if (File.Exists(envFilePath))
+    {
+        DotNetEnv.Env.Load(envFilePath);
+    }
+}
+
 builder.Services.AddRazorPages();
 builder.Services.AddScoped<IStudyPlannerService, StudyPlannerService>();
-var neonConnectionString = builder.Configuration.GetConnectionString("Neon");
+var neonConnectionString = builder.Configuration.GetConnectionString("Neon")
+    ?? Environment.GetEnvironmentVariable("DATABASE_URL");
 builder.Services.AddDbContext<StudyDbContext>(options =>
     options.UseNpgsql(
         neonConnectionString 
