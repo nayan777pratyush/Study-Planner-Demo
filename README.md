@@ -13,7 +13,7 @@ Neon project configuration is in [neon.ts](neon.ts), with Neon Auth enabled. The
 neon env pull --file .env.local
 ```
 
-1. Run `dotnet run`. The app loads `.env.local` in Development. For deployment, set `ConnectionStrings__Neon` through the hosting platform's secret configuration. Never commit `.env.local` or a real connection string.
+1. Run `dotnet run`. The app loads `.env.local` in Development; stop and restart it after pulling new values. For deployment, set `ConnectionStrings__Neon` through the hosting platform's secret configuration. Never commit `.env.local` or a real connection string.
 
 ## Neon CLI setup already completed
 

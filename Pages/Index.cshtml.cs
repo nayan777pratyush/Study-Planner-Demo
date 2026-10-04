@@ -41,7 +41,9 @@ public class IndexModel(
         }
         catch (Exception exception)
         {
-            logger.LogError(exception, "Failed to load the study planner dashboard.");
+            logger.LogError(
+                "Failed to load the study planner dashboard. Exception type: {ExceptionType}",
+                exception.GetType().Name);
             DatabaseError = "Couldn't load your study plan. Check the database connection and try again.";
         }
     }
@@ -81,12 +83,16 @@ public class IndexModel(
         }
         catch (DbUpdateException exception)
         {
-            logger.LogError(exception, "Failed to save a study planner change.");
+            logger.LogError(
+                "Failed to save a study planner change. Exception type: {ExceptionType}",
+                exception.GetType().Name);
             TempData["StatusMessage"] = "Couldn't save that change. Check the database and try again.";
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            logger.LogError(exception, "Unexpected error while updating the study planner.");
+            logger.LogError(
+                "Unexpected error while updating the study planner. Exception type: {ExceptionType}",
+                exception.GetType().Name);
             TempData["StatusMessage"] = "Couldn't complete that change. Please try again.";
         }
 
