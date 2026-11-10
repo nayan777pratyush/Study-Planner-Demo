@@ -42,6 +42,13 @@ namespace _10_project_webiste.Migrations
                     b.Property<bool>("IsComplete")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(5000)
+                        .HasColumnType("character varying(5000)")
+                        .HasDefaultValue("");
+
                     b.Property<string>("Priority")
                         .IsRequired()
                         .HasMaxLength(10)
@@ -88,6 +95,41 @@ namespace _10_project_webiste.Migrations
                     b.ToTable("subjects", (string)null);
                 });
 
+            modelBuilder.Entity("_10_project_webiste.Models.TaskAttachment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(5000)
+                        .HasColumnType("character varying(5000)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Label")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("TaskId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TaskId");
+
+                    b.ToTable("task_attachments", (string)null);
+                });
+
             modelBuilder.Entity("_10_project_webiste.Models.StudyTask", b =>
                 {
                     b.HasOne("_10_project_webiste.Models.Subject", "Subject")
@@ -97,6 +139,22 @@ namespace _10_project_webiste.Migrations
                         .IsRequired();
 
                     b.Navigation("Subject");
+                });
+
+            modelBuilder.Entity("_10_project_webiste.Models.TaskAttachment", b =>
+                {
+                    b.HasOne("_10_project_webiste.Models.StudyTask", "Task")
+                        .WithMany("Attachments")
+                        .HasForeignKey("TaskId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Task");
+                });
+
+            modelBuilder.Entity("_10_project_webiste.Models.StudyTask", b =>
+                {
+                    b.Navigation("Attachments");
                 });
 
             modelBuilder.Entity("_10_project_webiste.Models.Subject", b =>

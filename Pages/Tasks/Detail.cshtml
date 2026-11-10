@@ -1,0 +1,285 @@
+@page "{id:int}"
+@model _10_project_webiste.Pages.Tasks.DetailModel
+@using _10_project_webiste.Models
+@using System.IO
+@{
+    ViewData["Title"] = Model.Task?.Title ?? "Task detail";
+    var task = Model.Task;
+    bool isOverdue = task?.DueDate.HasValue == true && !task.IsComplete && task.DueDate < DateOnly.FromDateTime(DateTime.Today);
+    var images = task?.Attachments.Where(a => a.Type == AttachmentType.Image).ToList() ?? [];
+    var pdfs = task?.Attachments.Where(a => a.Type == AttachmentType.File).ToList() ?? [];
+    var links = task?.Attachments.Where(a => a.Type == AttachmentType.Link).ToList() ?? [];
+}
+
+<main class="app-shell">
+    <aside class="sidebar">
+        <a class="brand" asp-page="/Index">
+            <span class="brand-mark" aria-hidden="true">S</span>
+            <span>study <span class="brand-light">room</span></span>
+        </a>
+        <p class="nav-caption">WORKSPACE</p>
+        <nav class="main-nav" aria-label="Main navigation">
+            <a class="nav-item" href="/Index">
+                <span class="nav-icon">◫</span>
+                Overview
+            </a>
+            <a class="nav-item" href="/#planner">
+                <span class="nav-icon">☷</span>
+                Study planner
+            </a>
+            <a class="nav-item" href="/#subjects">
+                <span class="nav-icon">▦</span>
+                Subjects
+            </a>
+        </nav>
+        <div class="sidebar-bottom">
+            <div class="week-card">
+                <span class="week-icon">✳</span>
+                <strong>Task details</strong>
+                <p>Attach notes, links, images and files to your task.</p>
+            </div>
+            <div class="profile-row">
+                <span class="avatar">ST</span>
+                <span>
+                    <strong>My workspace</strong>
+                    <small>Study planner</small>
+                </span>
+                <span class="profile-more">···</span>
+            </div>
+        </div>
+    </aside>
+
+    <section class="main-content">
+        <header class="page-header">
+            <div>
+                <span class="breadcrumb">
+                    <a href="/" style="color:inherit;text-decoration:none;">WORKSPACE</a>
+                    <span>/</span>
+                    <a href="/#planner" style="color:inherit;text-decoration:none;">STUDY PLANNER</a>
+                    <span>/</span>
+                    TASK DETAIL
+                </span>
+                @if (task is not null) {
+                    <h1>@task.Title</h1>
+                    <div class="detail-meta">
+                        <span class="subject-dot-label" style="--subject-color: @task.Subject.Color">
+                            <span class="subject-dot"></span>
+                            @task.Subject.Name
+                        </span>
+                        <span class="priority priority-@task.Priority.ToLower()">@task.Priority</span>
+                        @if (task.DueDate.HasValue) {
+                            <span class="due-date @(isOverdue ? "is-overdue" : "")">
+                                Due @task.DueDate.Value.ToString("MMM d, yyyy")
+                            </span>
+                        }
+                        <span class="time-cell">@task.EstimatedMinutes min</span>
+                        @if (task.IsComplete) {
+                            <span class="complete-badge">✓ Complete</span>
+                        }
+                    </div>
+                }
+            </div>
+            <a href="/" class="back-button">← Back to planner</a>
+        </header>
+
+        @if (Model.StatusMessage is not null) {
+            <p class="status-message" role="status">@Model.StatusMessage</p>
+        }
+
+        @if (task is null) {
+            <div class="work-panel">
+                <p class="empty-state">Task not found.</p>
+            </div>
+        } else {
+            <div class="detail-grid">
+                <!-- NOTES SECTION -->
+                <div class="detail-section-card">
+                    <div class="detail-section-header">
+                        <span class="detail-section-icon notes-icon">📝</span>
+                        <h2>Notes</h2>
+                        <small>@(string.IsNullOrWhiteSpace(task.Notes) ? "No notes yet" : task.Notes.Length + " chars")</small>
+                    </div>
+                    <form method="post" asp-page-handler="SaveNotes" asp-route-id="@task.Id">
+                        @Html.AntiForgeryToken()
+                        <textarea
+                            name="notes"
+                            class="notes-textarea"
+                            placeholder="Write your study notes, summaries, formulas, key points... (supports plain text)"
+                            rows="8"
+                        >@task.Notes</textarea>
+                        <div class="detail-form-actions">
+                            <button type="submit" class="primary-button">Save notes</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- LINKS SECTION -->
+                <div class="detail-section-card">
+                    <div class="detail-section-header">
+                        <span class="detail-section-icon links-icon">🔗</span>
+                        <h2>Reference links</h2>
+                        <small>@links.Count link@(links.Count == 1 ? "" : "s")</small>
+                    </div>
+                    <form method="post" asp-page-handler="AddLink" asp-route-id="@task.Id" class="add-attachment-form">
+                        @Html.AntiForgeryToken()
+                        <div class="attach-row">
+                            <input
+                                type="url"
+                                name="url"
+                                placeholder="https://youtube.com/watch?v=..."
+                                required
+                                class="attach-input"
+                            />
+                            <input
+                                type="text"
+                                name="linkLabel"
+                                placeholder="Label (optional)"
+                                maxlength="200"
+                                class="attach-label-input"
+                            />
+                            <button type="submit" class="primary-button">Add link</button>
+                        </div>
+                    </form>
+                    @if (links.Count == 0) {
+                        <p class="attachment-empty">No reference links yet. Add a YouTube video, Wikipedia article, or any URL.</p>
+                    } else {
+                        <ul class="links-list">
+                            @foreach (var link in links) {
+                                <li class="link-item">
+                                    <div class="link-item-content">
+                                        <span class="link-favicon">🌐</span>
+                                        <div>
+                                            <a href="@link.Content" target="_blank" rel="noopener noreferrer" class="link-url">
+                                                @(string.IsNullOrWhiteSpace(link.Label) ? link.Content : link.Label)
+                                            </a>
+                                            @if (!string.IsNullOrWhiteSpace(link.Label)) {
+                                                <small class="link-url-sub">@link.Content</small>
+                                            }
+                                            <small class="attachment-date">Added @link.CreatedAtUtc.ToLocalTime().ToString("MMM d, yyyy")</small>
+                                        </div>
+                                    </div>
+                                    <form method="post" asp-page-handler="DeleteAttachment" asp-route-id="@task.Id" style="margin:0">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="attachmentId" value="@link.Id" />
+                                        <button type="submit" class="icon-button" title="Remove link" onclick="return confirm('Remove this link?')">×</button>
+                                    </form>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </div>
+
+                <!-- FILES & IMAGES SECTION -->
+                <div class="detail-section-card">
+                    <div class="detail-section-header">
+                        <span class="detail-section-icon files-icon">📎</span>
+                        <h2>Files &amp; Images</h2>
+                        <small>@(images.Count + pdfs.Count) file@((images.Count + pdfs.Count) == 1 ? "" : "s")</small>
+                    </div>
+                    <form method="post" asp-page-handler="UploadFile" asp-route-id="@task.Id" enctype="multipart/form-data" class="add-attachment-form">
+                        @Html.AntiForgeryToken()
+                        <div class="upload-zone" id="upload-zone">
+                            <input type="file" name="file" id="file-input" accept=".jpg,.jpeg,.png,.gif,.webp,.pdf" required class="file-input-hidden" />
+                            <label for="file-input" class="upload-zone-label">
+                                <span class="upload-icon">⬆</span>
+                                <span id="file-name-display">Click to choose or drag an image/PDF (max 10 MB)</span>
+                            </label>
+                        </div>
+                        <div class="attach-row" style="margin-top:8px">
+                            <input
+                                type="text"
+                                name="fileLabel"
+                                placeholder="Label (optional)"
+                                maxlength="200"
+                                class="attach-label-input"
+                            />
+                            <button type="submit" class="primary-button">Upload</button>
+                        </div>
+                    </form>
+
+                    @if (images.Count > 0) {
+                        <div class="image-gallery">
+                            @foreach (var img in images) {
+                                <div class="gallery-item">
+                                    <a href="@img.Content" target="_blank" rel="noopener noreferrer">
+                                        <img src="@img.Content" alt="@(img.Label ?? "Attached image")" class="gallery-img" loading="lazy" />
+                                    </a>
+                                    <div class="gallery-item-footer">
+                                        <span class="gallery-item-label">@(img.Label ?? "Image")</span>
+                                        <form method="post" asp-page-handler="DeleteAttachment" asp-route-id="@task.Id" style="margin:0">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="attachmentId" value="@img.Id" />
+                                            <button type="submit" class="icon-button" title="Delete image" onclick="return confirm('Delete this image?')">×</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+
+                    @if (pdfs.Count > 0) {
+                        <ul class="links-list" style="margin-top:12px">
+                            @foreach (var pdf in pdfs) {
+                                <li class="link-item">
+                                    <div class="link-item-content">
+                                        <span class="link-favicon">📄</span>
+                                        <div>
+                                            <a href="@pdf.Content" target="_blank" rel="noopener noreferrer" class="link-url">
+                                                @(string.IsNullOrWhiteSpace(pdf.Label) ? System.IO.Path.GetFileName(pdf.Content) : pdf.Label)
+                                            </a>
+                                            <small class="attachment-date">Uploaded @pdf.CreatedAtUtc.ToLocalTime().ToString("MMM d, yyyy")</small>
+                                        </div>
+                                    </div>
+                                    <form method="post" asp-page-handler="DeleteAttachment" asp-route-id="@task.Id" style="margin:0">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="attachmentId" value="@pdf.Id" />
+                                        <button type="submit" class="icon-button" title="Delete file" onclick="return confirm('Delete this file?')">×</button>
+                                    </form>
+                                </li>
+                            }
+                        </ul>
+                    }
+
+                    @if (images.Count == 0 && pdfs.Count == 0) {
+                        <p class="attachment-empty">No files yet. Upload diagrams, notes photos, or reference PDFs.</p>
+                    }
+                </div>
+            </div>
+        }
+
+        <footer class="page-footer">
+            <span>Studyroom <span class="footer-dot">·</span> Make room for progress</span>
+            <span>NEON POSTGRESQL</span>
+        </footer>
+    </section>
+</main>
+
+@section Scripts {
+    <script>
+    // Show filename when user picks file
+    document.getElementById('file-input')?.addEventListener('change', function() {
+        const display = document.getElementById('file-name-display');
+        if (display && this.files.length > 0) {
+            display.textContent = this.files[0].name;
+        }
+    });
+
+    // Drag-and-drop onto upload zone
+    const zone = document.getElementById('upload-zone');
+    const fileInput = document.getElementById('file-input');
+    if (zone && fileInput) {
+        zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+        zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+        zone.addEventListener('drop', e => {
+            e.preventDefault();
+            zone.classList.remove('drag-over');
+            const files = e.dataTransfer?.files;
+            if (files && files.length > 0) {
+                fileInput.files = files;
+                const display = document.getElementById('file-name-display');
+                if (display) display.textContent = files[0].name;
+            }
+        });
+    }
+    </script>
+}

@@ -105,6 +105,60 @@ public sealed class StudyPlannerService(StudyDbContext db) : IStudyPlannerServic
         await db.SaveChangesAsync();
     }
 
+    public async Task<StudyTask?> GetTaskDetailAsync(int id)
+    {
+        await EnsureDatabaseReadyAsync();
+        return await db.StudyTasks
+            .Include(task => task.Subject)
+            .Include(task => task.Attachments)
+            .FirstOrDefaultAsync(task => task.Id == id);
+    }
+
+    public async Task UpdateTaskNotesAsync(int taskId, string notes)
+    {
+        await EnsureDatabaseReadyAsync();
+        var task = await db.StudyTasks.FindAsync(taskId);
+        if (task is null) return;
+        task.UpdateNotes(notes);
+        await db.SaveChangesAsync();
+    }
+
+    public async Task AddLinkAttachmentAsync(int taskId, string url, string? label)
+    {
+        await EnsureDatabaseReadyAsync();
+        var task = await db.StudyTasks.Include(t => t.Attachments).FirstOrDefaultAsync(t => t.Id == taskId);
+        if (task is null) throw new StudyPlannerRuleException("Task not found.");
+        if (!Uri.TryCreate(url?.Trim(), UriKind.Absolute, out var uri) || (uri.Scheme != "http" && uri.Scheme != "https"))
+            throw new StudyPlannerRuleException("Please enter a valid http or https URL.");
+        task.AddAttachment(AttachmentType.Link, url!.Trim(), label);
+        await db.SaveChangesAsync();
+    }
+
+    public async Task AddFileAttachmentAsync(int taskId, string filePath, string? label, AttachmentType type)
+    {
+        await EnsureDatabaseReadyAsync();
+        var task = await db.StudyTasks.Include(t => t.Attachments).FirstOrDefaultAsync(t => t.Id == taskId);
+        if (task is null) throw new StudyPlannerRuleException("Task not found.");
+        task.AddAttachment(type, filePath, label);
+        await db.SaveChangesAsync();
+    }
+
+    public async Task DeleteAttachmentAsync(int attachmentId, string uploadsDirectory)
+    {
+        await EnsureDatabaseReadyAsync();
+        var attachment = await db.TaskAttachments.FindAsync(attachmentId);
+        if (attachment is null) return;
+        // If it's a file/image, delete from disk
+        if (attachment.Type is AttachmentType.Image or AttachmentType.File)
+        {
+            var fileName = Path.GetFileName(attachment.Content);
+            var filePath = Path.Combine(uploadsDirectory, fileName);
+            if (File.Exists(filePath)) File.Delete(filePath);
+        }
+        db.TaskAttachments.Remove(attachment);
+        await db.SaveChangesAsync();
+    }
+
     private async Task EnsureDatabaseReadyAsync()
     {
         await db.Database.MigrateAsync();

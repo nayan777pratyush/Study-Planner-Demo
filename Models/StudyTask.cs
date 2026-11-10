@@ -1,10 +1,19 @@
+using System.Collections.ObjectModel;
+
 namespace _10_project_webiste.Models;
 
 public class StudyTask
 {
-    private StudyTask() { }
+    private readonly List<TaskAttachment> _attachments = [];
+    private readonly ReadOnlyCollection<TaskAttachment> _attachmentView;
+
+    private StudyTask()
+    {
+        _attachmentView = _attachments.AsReadOnly();
+    }
 
     internal StudyTask(string title, DateOnly? dueDate, int estimatedMinutes, string priority, Subject subject)
+        : this()
     {
         Title = NormalizeTitle(title);
         DueDate = dueDate;
@@ -22,11 +31,25 @@ public class StudyTask
     public int EstimatedMinutes { get; private set; }
     public string Priority { get; private set; } = "Medium";
     public bool IsComplete { get; private set; }
+    public string Notes { get; private set; } = string.Empty;
     public DateTime CreatedAtUtc { get; private set; } = DateTime.UtcNow;
+    public IReadOnlyCollection<TaskAttachment> Attachments => _attachmentView;
 
     public void ToggleCompletion()
     {
         IsComplete = !IsComplete;
+    }
+
+    public void UpdateNotes(string notes)
+    {
+        Notes = notes?.Trim() ?? string.Empty;
+    }
+
+    internal TaskAttachment AddAttachment(AttachmentType type, string content, string? label)
+    {
+        var attachment = new TaskAttachment(Id, type, content, label);
+        _attachments.Add(attachment);
+        return attachment;
     }
 
     internal void Rename(string title)

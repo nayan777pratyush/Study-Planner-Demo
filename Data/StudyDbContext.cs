@@ -7,6 +7,7 @@ public class StudyDbContext(DbContextOptions<StudyDbContext> options) : DbContex
 {
     public DbSet<Subject> Subjects => Set<Subject>();
     public DbSet<StudyTask> StudyTasks => Set<StudyTask>();
+    public DbSet<TaskAttachment> TaskAttachments => Set<TaskAttachment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -32,6 +33,23 @@ public class StudyDbContext(DbContextOptions<StudyDbContext> options) : DbContex
             entity.Property(task => task.Title).HasMaxLength(120).IsRequired();
             entity.Property(task => task.Priority).HasMaxLength(10).IsRequired();
             entity.Property(task => task.DueDate).HasColumnType("date");
+            entity.Property(task => task.Notes).HasMaxLength(5000).HasDefaultValue("");
+            entity.HasMany(task => task.Attachments)
+                .WithOne(a => a.Task)
+                .HasForeignKey(a => a.TaskId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.Navigation(task => task.Attachments)
+                .HasField("_attachments")
+                .UsePropertyAccessMode(PropertyAccessMode.Field);
+        });
+
+        modelBuilder.Entity<TaskAttachment>(entity =>
+        {
+            entity.ToTable("task_attachments");
+            entity.HasKey(a => a.Id);
+            entity.Property(a => a.Content).HasMaxLength(5000).IsRequired();
+            entity.Property(a => a.Label).HasMaxLength(200);
+            entity.Property(a => a.Type).HasConversion<string>().HasMaxLength(10).IsRequired();
         });
     }
 }
